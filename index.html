@@ -4,123 +4,119 @@
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { 
-      background: #1a1a1a; 
+      background: transparent; 
       display: flex; 
       justify-content: center; 
       align-items: center; 
       height: 100vh;
       overflow: hidden;
     }
-    .flip-book {
-      display: block;
+    .flip-book { display: block; }
+    .page {
+      background: white;
     }
     .page img {
       width: 100%;
       height: 100%;
-      object-fit: contain;
+      object-fit: fill;
+      display: block;
     }
-    .page:nth-child(odd) {
-  border-right: 1px solid #333;
-}
-
-.page:nth-child(even) {
-  border-left: 1px solid #333;
-}
-  
   </style>
 </head>
 <body>
   <div id="flipbook" class="flip-book"></div>
 
-
-  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.js"></script>
 
   <script>
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+    const singlePages = ['cover.jpg', 'endcover.jpg'];
+    
+    const images = [
+      'cover.jpg', 'index.jpg',
+      'page1.jpg', 'page2.jpg', 'page3.jpg', 'page4.jpg', 'page5.jpg',
+      'page6.jpg', 'page7.jpg', 'page8.jpg', 'page9.jpg', 'page10.jpg',
+      'page11.jpg', 'appendix.jpg', 'endcover.jpg'
+    ];
 
-    async function loadPDF() {
-      const pdf = await pdfjsLib.getDocument('519_reportt.pdf').promise;
-      
-      const firstPage = await pdf.getPage(1);
-      const viewport0 = firstPage.getViewport({ scale: 1 });
-      const pw = Math.floor(viewport0.width);
-      const ph = Math.floor(viewport0.height);
-      console.log('Page size:', pw, ph);
+    const container = document.getElementById('flipbook');
 
-      const container = document.getElementById('flipbook');
-
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const viewport = page.getViewport({ scale: 2 });
-        const isSpread = viewport.width > viewport.height;
-
-        const canvas = document.createElement('canvas');
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
-        await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
-
-        if (isSpread) {
-  const halfWidth = viewport.width / 2;
-  ['left', 'right'].forEach(side => {
-    const half = document.createElement('canvas');
-    half.width = halfWidth;
-    half.height = viewport.height;
-    const ctx = half.getContext('2d');
-    ctx.drawImage(canvas, side === 'left' ? 0 : halfWidth, 0, halfWidth, viewport.height, 0, 0, halfWidth, viewport.height);
-
-    // Draw the line directly onto the canvas
-    ctx.fillStyle = '#888';
-    if (side === 'left') {
-      ctx.fillRect(halfWidth - 3, 0, 3, viewport.height);
-    } else {
-      ctx.fillRect(0, 0, 3, viewport.height);
+    function loadImage(src) {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.src = src;
+      });
     }
 
-    const img = document.createElement('img');
-    img.src = half.toDataURL('image/jpeg', 1.0);
-
-    const div = document.createElement('div');
-    div.classList.add('page');
-    div.style.width = halfWidth / 2 + 'px';
-    div.style.height = viewport.height / 2 + 'px';
-    div.appendChild(img);
-    container.appendChild(div);
-  });
-} else {
-          const img = document.createElement('img');
-          img.src = canvas.toDataURL('image/jpeg', 1.0);
-
-          const div = document.createElement('div');
-          div.classList.add('page');
-          div.style.width = pw + 'px';
-          div.style.height = ph + 'px';
-          div.appendChild(img);
-          container.appendChild(div);
-        }
-        console.log('Page', i, 'done');
-      }
+    async function init() {
+      const SINGLE_W = 960;
+      const SINGLE_H = 1285;
 
       const scale = Math.min(
-        (window.innerWidth * 0.9) / (pw * 2),
-        (window.innerHeight * 0.9) / ph
+        (window.innerWidth * 0.9) / (SINGLE_W * 2),
+        (window.innerHeight * 0.9) / SINGLE_H
       );
 
+      const pageWidth = Math.floor(SINGLE_W * scale);
+      const pageHeight = Math.floor(SINGLE_H * scale);
+
+      for (const src of images) {
+        const isSingle = singlePages.includes(src);
+        const imgEl = await loadImage(src);
+
+        if (isSingle) {
+          const div = document.createElement('div');
+          div.classList.add('page');
+          div.style.width = pageWidth + 'px';
+          div.style.height = pageHeight + 'px';
+          const img = document.createElement('img');
+          img.src = src;
+          div.appendChild(img);
+          container.appendChild(div);
+        } else {
+          for (const side of ['left', 'right']) {
+            const canvas = document.createElement('canvas');
+            canvas.width = imgEl.naturalWidth / 2;
+            canvas.height = imgEl.naturalHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(imgEl, side === 'left' ? 0 : imgEl.naturalWidth / 2, 0, imgEl.naturalWidth / 2, imgEl.naturalHeight, 0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = '#888';
+            if (side === 'left') {
+              ctx.fillRect(canvas.width - 3, 0, 3, canvas.height);
+            } else {
+              ctx.fillRect(0, 0, 3, canvas.height);
+            }
+
+            const img = document.createElement('img');
+            img.src = canvas.toDataURL('image/jpeg', 1.0);
+
+            const div = document.createElement('div');
+            div.classList.add('page');
+            div.style.width = pageWidth + 'px';
+            div.style.height = pageHeight + 'px';
+            div.appendChild(img);
+            container.appendChild(div);
+          }
+        }
+      }
+
       const pageFlip = new St.PageFlip(document.getElementById('flipbook'), {
-        width: Math.floor(pw * scale),
-        height: Math.floor(ph * scale),
+        width: pageWidth,
+        height: pageHeight,
         showCover: true,
         mobileScrollSupport: false,
         useMouseEvents: true,
         drawShadow: true,
         flippingTime: 800,
+        autoSize: false,
+        usePortrait: false,
       });
 
       pageFlip.loadFromHTML(document.querySelectorAll('.page'));
-      console.log('Flipbook ready!');
     }
 
-    loadPDF().catch(err => console.error('ERROR:', err));
+    init();
   </script>
 </body>
 </html>
