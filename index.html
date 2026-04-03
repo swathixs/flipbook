@@ -12,7 +12,7 @@
       overflow: hidden;
     }
     #loading {
-      color: white;
+      color: transparent;
       font-family: sans-serif;
       font-size: 16px;
       position: absolute;
@@ -62,8 +62,8 @@
       const SINGLE_H = 1285;
 
       const scale = Math.min(
-        (window.innerWidth * 0.9) / (SINGLE_W * 2),
-        (window.innerHeight * 0.9) / SINGLE_H
+        (window.innerWidth * 1.5) / (SINGLE_W * 2),
+        (window.innerHeight * 1.5) / SINGLE_H
       );
 
       const pageWidth = Math.floor(SINGLE_W * scale);
@@ -128,7 +128,7 @@
       setTimeout(() => {
         document.getElementById('loading').style.display = 'none';
         document.getElementById('flipbook').style.display = 'block';
-      }, 3000);
+      }, 1000);
     }
 
     init();
