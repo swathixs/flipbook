@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      background: #1a1a1a; 
+      display: flex; 
+      justify-content: center; 
+      align-items: center; 
+      height: 100vh;
+      overflow: hidden;
+    }
+    .flip-book {
+      display: block;
+    }
+    .page img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+    .page:nth-child(odd) {
+  border-right: 1px solid #333;
+}
+
+.page:nth-child(even) {
+  border-left: 1px solid #333;
+}
+  
+  </style>
+</head>
+<body>
+  <div id="flipbook" class="flip-book"></div>
+
+
+  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.js"></script>
+
+  <script>
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+
+    async function loadPDF() {
+      const pdf = await pdfjsLib.getDocument('519_reportt.pdf').promise;
+      
+      const firstPage = await pdf.getPage(1);
+      const viewport0 = firstPage.getViewport({ scale: 1 });
+      const pw = Math.floor(viewport0.width);
+      const ph = Math.floor(viewport0.height);
+      console.log('Page size:', pw, ph);
+
+      const container = document.getElementById('flipbook');
+
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const viewport = page.getViewport({ scale: 2 });
+        const isSpread = viewport.width > viewport.height;
+
+        const canvas = document.createElement('canvas');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+
+        if (isSpread) {
+  const halfWidth = viewport.width / 2;
+  ['left', 'right'].forEach(side => {
+    const half = document.createElement('canvas');
+    half.width = halfWidth;
+    half.height = viewport.height;
+    const ctx = half.getContext('2d');
+    ctx.drawImage(canvas, side === 'left' ? 0 : halfWidth, 0, halfWidth, viewport.height, 0, 0, halfWidth, viewport.height);
+
+    // Draw the line directly onto the canvas
+    ctx.fillStyle = '#888';
+    if (side === 'left') {
+      ctx.fillRect(halfWidth - 3, 0, 3, viewport.height);
+    } else {
+      ctx.fillRect(0, 0, 3, viewport.height);
+    }
+
+    const img = document.createElement('img');
+    img.src = half.toDataURL('image/jpeg', 1.0);
+
+    const div = document.createElement('div');
+    div.classList.add('page');
+    div.style.width = halfWidth / 2 + 'px';
+    div.style.height = viewport.height / 2 + 'px';
+    div.appendChild(img);
+    container.appendChild(div);
+  });
+} else {
+          const img = document.createElement('img');
+          img.src = canvas.toDataURL('image/jpeg', 1.0);
+
+          const div = document.createElement('div');
+          div.classList.add('page');
+          div.style.width = pw + 'px';
+          div.style.height = ph + 'px';
+          div.appendChild(img);
+          container.appendChild(div);
+        }
+        console.log('Page', i, 'done');
+      }
+
+      const scale = Math.min(
+        (window.innerWidth * 0.9) / (pw * 2),
+        (window.innerHeight * 0.9) / ph
+      );
+
+      const pageFlip = new St.PageFlip(document.getElementById('flipbook'), {
+        width: Math.floor(pw * scale),
+        height: Math.floor(ph * scale),
+        showCover: true,
+        mobileScrollSupport: false,
+        useMouseEvents: true,
+        drawShadow: true,
+        flippingTime: 800,
+      });
+
+      pageFlip.loadFromHTML(document.querySelectorAll('.page'));
+      console.log('Flipbook ready!');
+    }
+
+    loadPDF().catch(err => console.error('ERROR:', err));
+  </script>
+</body>
+</html>
